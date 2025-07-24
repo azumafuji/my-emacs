@@ -1,1 +1,5 @@
 My Emacs
+
+These are additional config files for using minimal-emacs.d from https://github.com/jamescherti/minimal-emacs.d
+
+This assume you install to =~/.emacs.d=. Link the pre-early-init.el file in the =.emacs.d= directory and start it up.
