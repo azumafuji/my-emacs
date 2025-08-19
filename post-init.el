@@ -652,8 +652,25 @@
 
 (setq org-agenda-files (append project-files '("inbox.org" "work.org" "notes.org")))
 
-
 (setq org-use-fast-todo-selection 'expert)
+
+
+;; Org packages for additional export support
+(use-package ox-gfm
+  :ensure t
+  :defer t)
+(use-package ox-epub
+  :ensure t
+  :defer t)
+(use-package ox-odt
+  :ensure t
+  :defer t)
+(use-package ox-tufte
+  :ensure t
+  :defer t)
+(use-package ob-sql-mode
+  :ensure t
+  :defer t)
 
 ;; Org mode is a major mode designed for organizing notes, planning, task
 ;; management, and authoring documents using plain text with a simple and
@@ -683,7 +700,10 @@
 
   :config
   (add-to-list 'org-export-backends 'md)
-
+  (require 'ox-gfm nil t)
+  (require 'ox-epub nil t)
+  (require 'ox-odt nil t)
+  (require 'ox-tufte nil t)
   ;; Make org-open-at-point follow file links in the same window
   (setf (cdr (assoc 'file org-link-frame-setup)) 'find-file)
 
@@ -757,22 +777,6 @@
  '(org-level-4 ((t (:inherit outline-4 :height 1.0))))
  '(org-level-5 ((t (:inherit outline-5 :height 1.0)))))
 
-
-(use-package ox-gfm
-  :ensure t
-  :defer t)
-(use-package ox-epub
-  :ensure t
-  :defer t)
-(use-package ox-odt
-  :ensure t
-  :defer t)
-(use-package ox-tufte
-  :ensure t
-  :defer t)
-(use-package ob-sql-mode
-  :ensure t
-  :defer t)
 
 
 
@@ -1021,3 +1025,13 @@
   :ensure t
   :defer t
   :after magit)
+
+
+;;; gptel
+(use-package gptel
+  :ensure t
+  :defer t
+  :config
+  (require 'gptel-integrations)
+  (setq gptel-model 'gpt-5
+        gptel-backend (gptel-make-gh-copilot "Copilot")))

@@ -1,4 +1,4 @@
-(setq minimal-emacs-user-directory "~/.config/minimal-emacs.d/")
+(setq minimal-emacs-user-directory "~/.config/my-emacs/")
 
 
 (when (featurep 'native-compile)
