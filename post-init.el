@@ -52,9 +52,9 @@
 ;; accessed files, making it easier to reopen files you have worked on
 ;; recently.
 
-(setq recentf-exclude `(,(expand-file-name "eln-cache/" user-emacs-directory)
-                        ,(expand-file-name "etc/" user-emacs-directory)
-                        ,(expand-file-name "var/" user-emacs-directory)))
+(add-to-list 'recentf-exclude (expand-file-name "eln-cache/" user-emacs-directory))
+(add-to-list 'recentf-exclude (expand-file-name "etc/" user-emacs-directory))
+(add-to-list 'recentf-exclude (expand-file-name "var/" user-emacs-directory))
 
 (setq recentf-max-saved-items 100)
 
@@ -298,7 +298,6 @@
            :scroll-bar-width 8)))
 
 (spacious-padding-mode 1)
-(define-key global-map (kbd "<f8>") #'spacious-padding-mode)
 
 
 ;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;
@@ -511,21 +510,19 @@
 ;; such as Emacs Lisp and Python, allowing users to collapse and expand sections
 ;; based on headings or indentation levels. This feature enhances navigation and
 ;; improves the management of large files with hierarchical structures.
+(defun ds/set-outline-fold-char ()
+  (let* ((display-table (or buffer-display-table (make-display-table)))
+         (face-offset (* (face-id 'shadow) (ash 1 22)))
+         (value (vconcat (mapcar (lambda (c) (+ face-offset c)) " ▼"))))
+    (set-display-table-slot display-table 'selective-display value)
+    (setq buffer-display-table display-table)))
+
 (use-package outline
   :ensure nil
   :commands outline-minor-mode
   :hook
   ((emacs-lisp-mode . outline-minor-mode)
-   ;; Use " ▼" instead of the default ellipsis "..." for folded text to make
-   ;; folds more visually distinctive and readable.
-   (outline-minor-mode
-    .
-    (lambda()
-      (let* ((display-table (or buffer-display-table (make-display-table)))
-             (face-offset (* (face-id 'shadow) (ash 1 22)))
-             (value (vconcat (mapcar (lambda (c) (+ face-offset c)) " ▼"))))
-        (set-display-table-slot display-table 'selective-display value)
-        (setq buffer-display-table display-table))))))
+   (outline-minor-mode . ds/set-outline-fold-char)))
 
 ;; The outline-indent Emacs package provides a minor mode that enables code
 ;; folding based on indentation levels.
@@ -652,7 +649,7 @@
 
 (setq org-agenda-files (append project-files '("inbox.org" "work.org" "notes.org")))
 
-(setq org-use-fast-todo-selection 'expert)
+
 
 
 ;; Org packages for additional export support
@@ -947,12 +944,10 @@
   ;;(when treemacs-python-executable
   ;;  (treemacs-git-commit-diff-mode t))
 
-  (pcase (cons (not (null (executable-find "git")))
-               (not (null treemacs-python-executable)))
-    (`(t . t)
-     (treemacs-git-mode 'deferred))
-    (`(t . _)
-     (treemacs-git-mode 'simple)))
+  (if (and (executable-find "git") treemacs-python-executable)
+      (treemacs-git-mode 'deferred)
+    (when (executable-find "git")
+      (treemacs-git-mode 'simple)))
 
   (treemacs-hide-gitignored-files-mode nil))
 
@@ -993,19 +988,16 @@
   ;; 'project-root' looks for common project markers (like pyproject.toml, requirements.txt)
   (setq pyvenv-activate-search-strategy '(vc-root project-root)))
 
-(add-hook 'python-mode-hook
-          (lambda ()
-            ;; Check if a pyproject.toml exists to indicate a project root
-            (let ((project-root (locate-dominating-file default-directory "pyproject.toml")))
-              (when project-root
-                ;; Try to activate the virtual environment in that project root
-                ;; Assumes .venv is in the project root
-                (let ((venv-path (expand-file-name ".venv" project-root)))
-                  (when (file-directory-p venv-path)
-                    (pyvenv-activate venv-path)))))
-            ;; Ensure eglot starts after the virtual environment is (potentially) activated
-            (unless (eglot-managed-p)
-              (eglot-ensure))))
+(defun ds/python-mode-setup ()
+  (let ((project-root (locate-dominating-file default-directory "pyproject.toml")))
+    (when project-root
+      (let ((venv-path (expand-file-name ".venv" project-root)))
+        (when (file-directory-p venv-path)
+          (pyvenv-activate venv-path)))))
+  (unless (eglot-managed-p)
+    (eglot-ensure)))
+
+(add-hook 'python-mode-hook #'ds/python-mode-setup)
 
 ;;; mise
 (use-package mise
@@ -1035,3 +1027,17 @@
   (require 'gptel-integrations)
   (setq gptel-model 'gpt-5
         gptel-backend (gptel-make-gh-copilot "Copilot")))
+
+
+(use-package shell-maker
+  :defer t
+  :ensure t)
+
+(use-package acp
+  :vc (:url "https://github.com/xenodium/acp.el"))
+
+(use-package agent-shell
+  :vc (:url "https://github.com/xenodium/agent-shell"))
+
+(setq agent-shell-google-authentication
+      (agent-shell-google-make-authentication :login t))
