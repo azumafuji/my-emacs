@@ -246,9 +246,11 @@
 
   (doric-themes-select 'doric-light)
 
-  (set-face-attribute 'default nil :family "Atkinson Hyperlegible Mono" :height 100)
-  (set-face-attribute 'variable-pitch nil :family "Literata" :height 1.0)
-  (set-face-attribute 'fixed-pitch nil :family "Atkinson Hyperlegible Mono" :height 1.0)
+  (set-face-attribute 'default nil :family "IosevkaTerm Nerd Font Mono" :height 110)
+  (set-face-attribute 'default nil :family "Fantasque Sans Mono" :height 120)
+  (set-face-attribute 'variable-pitch nil :family "IBM Plex Serif" :height 1.0)
+  (set-face-attribute 'fixed-pitch nil :family "IosevkaTerm Nerd Font Mono" :height 1.0)
+  (setq-default line-spacing 5)
 
   :bind
   (("<f5>" . doric-themes-toggle)
@@ -607,7 +609,14 @@
   :custom
   (eglot-stay-out-of '(yasnippet))
   :config
-  (fset #'jsonrpc--log-event #'ignore))
+  (fset #'jsonrpc--log-event #'ignore)
+  (add-to-list 'eglot-server-programs
+               `((python-ts-mode python-mode)
+                 . ,(eglot-alternatives '(("uv" "run" "pylsp")
+                                          "pylsp"
+                                          "jedi-language-server"
+                                          ("pyright-langserver" "--stdio"))))))
+
 
 ;; Apheleia is an Emacs package designed to run code formatters (e.g., Shfmt,
 ;; Black and Prettier) asynchronously without disrupting the cursor position.
@@ -974,30 +983,30 @@
                                       "autogen.sh"))
 
 (use-package exec-path-from-shell
-  :if (memq window-system '(mac ns x)) ; Only for GUI Emacs on Unix-like systems
+  :if (not (memq window-system '(nil))) ; Only for GUI Emacs on Unix-like systems
   :ensure t
   :defer t
   :init (exec-path-from-shell-initialize))
 
-(use-package pyvenv
-  :ensure t ; Ensure pyvenv is installed
-  :defer t
-  :config
-  ;; Configure pyvenv to search for virtual environments
-  ;; 'vc-root' looks in version control roots (like .git)
-  ;; 'project-root' looks for common project markers (like pyproject.toml, requirements.txt)
-  (setq pyvenv-activate-search-strategy '(vc-root project-root)))
+;; (use-package pyvenv
+;;   :ensure t ; Ensure pyvenv is installed
+;;   :defer t
+;;   :config
+;;   ;; Configure pyvenv to search for virtual environments
+;;   ;; 'vc-root' looks in version control roots (like .git)
+;;   ;; 'project-root' looks for common project markers (like pyproject.toml, requirements.txt)
+;;   (setq pyvenv-activate-search-strategy '(vc-root project-root)))
 
-(defun ds/python-mode-setup ()
-  (let ((project-root (locate-dominating-file default-directory "pyproject.toml")))
-    (when project-root
-      (let ((venv-path (expand-file-name ".venv" project-root)))
-        (when (file-directory-p venv-path)
-          (pyvenv-activate venv-path)))))
-  (unless (eglot-managed-p)
-    (eglot-ensure)))
-
-(add-hook 'python-mode-hook #'ds/python-mode-setup)
+;; (defun ds/python-mode-setup ()
+;;   (let ((project-root (locate-dominating-file default-directory "pyproject.toml")))
+;;     (when project-root
+;;       (let ((venv-path (expand-file-name ".venv" project-root)))
+;;         (when (file-directory-p venv-path)
+;;           (pyvenv-activate venv-path)))))
+;;   (unless (eglot-managed-p)
+;;     (eglot-ensure)))
+;;
+;; (add-hook 'python-mode-hook #'ds/python-mode-setup)
 
 ;;; mise
 (use-package mise
@@ -1041,3 +1050,56 @@
 
 (setq agent-shell-google-authentication
       (agent-shell-google-make-authentication :login t))
+
+(use-package pet
+  :ensure t
+  :defer t
+  :config
+  (add-hook 'python-base-mode-hook 'pet-mode -10))
+
+
+
+(defun uv-activate ()
+  "Activate Python environment managed by uv based on current project directory.
+Looks for .venv directory in project root and activates the Python interpreter."
+  (interactive)
+  (let* ((project-root (project-root (project-current t)))
+         (venv-path (expand-file-name ".venv" project-root))
+         (python-path (expand-file-name
+                       (if (eq system-type 'windows-nt)
+                           "Scripts/python.exe"
+                         "bin/python")
+                       venv-path)))
+    (if (file-exists-p python-path)
+        (progn
+          ;; Set Python interpreter path
+          (setq python-shell-interpreter python-path)
+
+          ;; Update exec-path to include the venv's bin directory
+          (let ((venv-bin-dir (file-name-directory python-path)))
+            (setq exec-path (cons venv-bin-dir
+                                  (remove venv-bin-dir exec-path))))
+
+          ;; Update PATH environment variable
+          (setenv "PATH" (concat (file-name-directory python-path)
+                                 path-separator
+                                 (getenv "PATH")))
+
+          ;; Update VIRTUAL_ENV environment variable
+          (setenv "VIRTUAL_ENV" venv-path)
+
+          ;; Remove PYTHONHOME if it exists
+          (setenv "PYTHONHOME" nil)
+
+          (message "Activated UV Python environment at %s" venv-path))
+      (error "No UV Python environment found in %s" project-root))))
+
+(defun my-pet-set-exec-path ()
+  "Set buffer-local exec-path to include pet venv."
+  (let ((venv (pet-virtualenv-root)))
+    (when venv
+      (let ((bin-path (expand-file-name "bin" venv)))
+        (make-local-variable 'exec-path)
+        (add-to-list 'exec-path bin-path)))))
+
+(add-hook 'python-mode-hook #'my-pet-set-exec-path)
