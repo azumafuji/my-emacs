@@ -7,3 +7,5 @@
           (lambda ()
             (set-face-attribute 'mode-line-active nil :height 1.0 :inherit 'variable-pitch)
             (set-face-attribute 'mode-line-inactive nil :height 0.8 :inherit 'variable-pitch)))
+
+(add-to-list 'default-frame-alist '(width . 192))

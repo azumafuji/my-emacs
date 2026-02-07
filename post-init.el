@@ -246,11 +246,10 @@
 
   (doric-themes-select 'doric-light)
 
-  (set-face-attribute 'default nil :family "IosevkaTerm Nerd Font Mono" :height 110)
-  (set-face-attribute 'default nil :family "Fantasque Sans Mono" :height 120)
+  (set-face-attribute 'default nil :family "IBM Plex Mono" :height 110)
   (set-face-attribute 'variable-pitch nil :family "IBM Plex Serif" :height 1.0)
   (set-face-attribute 'fixed-pitch nil :family "IosevkaTerm Nerd Font Mono" :height 1.0)
-  (setq-default line-spacing 5)
+  (setq-default line-spacing 4)
 
   :bind
   (("<f5>" . doric-themes-toggle)
@@ -323,9 +322,17 @@
   (text-mode-ispell-word-completion nil)
   (tab-always-indent 'complete)
 
+  ;; Enable auto completion
+  :init
+  (setq corfu-auto t)
+  (setq corfu-auto-delay 0.0)
+  (setq corfu-auto-prefix 1)
+
   ;; Enable Corfu
   :config
   (global-corfu-mode))
+
+
 
 ;; Cape, or Completion At Point Extensions, extends the capabilities of
 ;; in-buffer completion. It integrates with Corfu or the default completion UI,
@@ -476,6 +483,8 @@
 
   :init
   ;; Optionally configure the register formatting. This improves the register
+  (require 'bookmark)
+  (require 'consult)
   (setq register-preview-delay 0.5
         register-preview-function #'consult-register-format)
 
@@ -502,8 +511,8 @@
    consult-theme :preview-key '(:debounce 0.2 any)
    consult-ripgrep consult-git-grep consult-grep
    consult-bookmark consult-recent-file consult-xref
-   consult--source-bookmark consult--source-file-register
-   consult--source-recent-file consult--source-project-recent-file
+   consult-source-bookmark consult-source-file-register
+   consult-source-recent-file consult-source-project-recent-file
    ;; :preview-key "M-."
    :preview-key '(:debounce 0.4 any))
   (setq consult-narrow-key "<"))
@@ -601,36 +610,48 @@
 ;; Eglot and Programming
 
 ;; Set up the Language Server Protocol (LSP) servers using Eglot.
+(defun minimal-emacs-eglot-ensure ()
+  "Start Eglot in non-Emacs Lisp modes."
+  (unless (derived-mode-p 'emacs-lisp-mode)
+    (eglot-ensure)))
+
 (use-package eglot
   :ensure nil
+  :hook ((prog-mode . minimal-emacs-eglot-ensure)
+         (html-mode . eglot-ensure)
+         (html-ts-mode . eglot-ensure)
+         (web-mode . eglot-ensure))
   :commands (eglot-ensure
              eglot-rename
              eglot-format-buffer)
   :custom
   (eglot-stay-out-of '(yasnippet))
+  (eglot-events-buffer-size 0) ;; Disable logging for performance
   :config
-  (fset #'jsonrpc--log-event #'ignore)
+  ;; Configure Python
+  ;; Using 'rass' to multiplex ty, ruff, and djls
   (add-to-list 'eglot-server-programs
-               `((python-ts-mode python-mode)
-                 . ,(eglot-alternatives '(("uv" "run" "pylsp")
-                                          "pylsp"
-                                          "jedi-language-server"
-                                          ("pyright-langserver" "--stdio"))))))
+               '((python-mode python-ts-mode) . ("rass" "--" "ty" "--" "ruff" "server" "--" "djls")))
 
+  ;; Configure Web/HTML modes
+  ;; Using 'rass' to multiplex vscode-html and tailwindcss behavior
+  (add-to-list 'eglot-server-programs
+               '((html-mode html-ts-mode mhtml-mode web-mode) . ("rass" "--" "vscode-html-language-server" "--stdio" "--" "tailwindcss-language-server" "--stdio"))))
 
-;; Apheleia is an Emacs package designed to run code formatters (e.g., Shfmt,
-;; Black and Prettier) asynchronously without disrupting the cursor position.
+(use-package consult-eglot
+  :ensure t
+  :after (consult eglot)
+  :bind (:map eglot-mode-map
+              ("M-s s" . consult-eglot-symbols)))
+
+;; Apheleia for formatting (async)
 (use-package apheleia
   :ensure t
   :commands (apheleia-mode
              apheleia-global-mode)
   :hook ((prog-mode . apheleia-mode)))
 
-;; Tree-sitter in Emacs is an incremental parsing system introduced in Emacs 29
-;; that provides precise, high-performance syntax highlighting. It supports a
-;; broad set of programming languages, including Bash, C, C++, C#, CMake, CSS,
-;; Dockerfile, Go, Java, JavaScript, JSON, Python, Rust, TOML, TypeScript, YAML,
-;; Elisp, Lua, Markdown, and many others.
+;; Tree-sitter configuration
 (use-package treesit-auto
   :ensure t
   :custom
@@ -638,6 +659,7 @@
   :config
   (treesit-auto-add-to-auto-mode-alist 'all)
   (global-treesit-auto-mode))
+
 
 
 ;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;
@@ -988,26 +1010,6 @@
   :defer t
   :init (exec-path-from-shell-initialize))
 
-;; (use-package pyvenv
-;;   :ensure t ; Ensure pyvenv is installed
-;;   :defer t
-;;   :config
-;;   ;; Configure pyvenv to search for virtual environments
-;;   ;; 'vc-root' looks in version control roots (like .git)
-;;   ;; 'project-root' looks for common project markers (like pyproject.toml, requirements.txt)
-;;   (setq pyvenv-activate-search-strategy '(vc-root project-root)))
-
-;; (defun ds/python-mode-setup ()
-;;   (let ((project-root (locate-dominating-file default-directory "pyproject.toml")))
-;;     (when project-root
-;;       (let ((venv-path (expand-file-name ".venv" project-root)))
-;;         (when (file-directory-p venv-path)
-;;           (pyvenv-activate venv-path)))))
-;;   (unless (eglot-managed-p)
-;;     (eglot-ensure)))
-;;
-;; (add-hook 'python-mode-hook #'ds/python-mode-setup)
-
 ;;; mise
 (use-package mise
   :ensure t
@@ -1026,16 +1028,6 @@
   :ensure t
   :defer t
   :after magit)
-
-
-;;; gptel
-(use-package gptel
-  :ensure t
-  :defer t
-  :config
-  (require 'gptel-integrations)
-  (setq gptel-model 'gpt-5
-        gptel-backend (gptel-make-gh-copilot "Copilot")))
 
 
 (use-package shell-maker
@@ -1057,49 +1049,44 @@
   :config
   (add-hook 'python-base-mode-hook 'pet-mode -10))
 
+(use-package eat
+  :ensure t
+  :bind
+  ((:map eat-semi-char-mode-map
+         ("M-o" . ace-window))
+   (:map eat-char-mode-map
+         ("M-o" . ace-window))))
+;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;
+;; Window Management
 
 
-(defun uv-activate ()
-  "Activate Python environment managed by uv based on current project directory.
-Looks for .venv directory in project root and activates the Python interpreter."
-  (interactive)
-  (let* ((project-root (project-root (project-current t)))
-         (venv-path (expand-file-name ".venv" project-root))
-         (python-path (expand-file-name
-                       (if (eq system-type 'windows-nt)
-                           "Scripts/python.exe"
-                         "bin/python")
-                       venv-path)))
-    (if (file-exists-p python-path)
-        (progn
-          ;; Set Python interpreter path
-          (setq python-shell-interpreter python-path)
+(defun select-new-buffer (window)
+  (select-window window))
 
-          ;; Update exec-path to include the venv's bin directory
-          (let ((venv-bin-dir (file-name-directory python-path)))
-            (setq exec-path (cons venv-bin-dir
-                                  (remove venv-bin-dir exec-path))))
+;; Ensure switch-to-buffer obeys display actions
+(setq switch-to-buffer-obey-display-actions t)
 
-          ;; Update PATH environment variable
-          (setenv "PATH" (concat (file-name-directory python-path)
-                                 path-separator
-                                 (getenv "PATH")))
+(add-to-list 'display-buffer-alist
+             '("\\(?:\\*\\(?:acp\\|[Aa]gent-[Ss]hell\\|[Gg]emini\\)\\|Gemini CLI Agent\\).*"
+               (display-buffer-in-side-window)
+               (side . right)
+               (slot . 0)
+               (window-width . 0.3)
+               (dedicated . t)
+               (window-parameters . ((no-other-window . t)
+                                     (no-delete-other-windows . t)))))
 
-          ;; Update VIRTUAL_ENV environment variable
-          (setenv "VIRTUAL_ENV" venv-path)
+(add-to-list 'display-buffer-alist
+             '("\\*Occur\\*"
+               (display-buffer-reuse-mode-window
+                display-buffer-below-selected)
+               (window-height . 10)
+               (dedicated . t )
+               (body-function . select-new-buffer)))
 
-          ;; Remove PYTHONHOME if it exists
-          (setenv "PYTHONHOME" nil)
-
-          (message "Activated UV Python environment at %s" venv-path))
-      (error "No UV Python environment found in %s" project-root))))
-
-(defun my-pet-set-exec-path ()
-  "Set buffer-local exec-path to include pet venv."
-  (let ((venv (pet-virtualenv-root)))
-    (when venv
-      (let ((bin-path (expand-file-name "bin" venv)))
-        (make-local-variable 'exec-path)
-        (add-to-list 'exec-path bin-path)))))
-
-(add-hook 'python-mode-hook #'my-pet-set-exec-path)
+(add-to-list 'display-buffer-alist
+             '("\\*eat\\*"
+               (display-buffer-in-side-window display-buffer-at-bottom)
+               (side . bottom)
+               (slot . 0)
+               (window-height . 0.25)))
