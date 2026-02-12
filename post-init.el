@@ -246,7 +246,7 @@
 
   (doric-themes-select 'doric-light)
 
-  (set-face-attribute 'default nil :family "IBM Plex Mono" :height 110)
+  (set-face-attribute 'default nil :family "IosevkaTerm Nerd Font Mono" :height 110)
   (set-face-attribute 'variable-pitch nil :family "IBM Plex Serif" :height 1.0)
   (set-face-attribute 'fixed-pitch nil :family "IosevkaTerm Nerd Font Mono" :height 1.0)
   (setq-default line-spacing 4)
@@ -312,8 +312,10 @@
   :commands (corfu-mode global-corfu-mode)
 
   :hook ((prog-mode . corfu-mode)
-         (shell-mode . corfu-mode)
-         (eshell-mode . corfu-mode))
+          (shell-mode . corfu-mode)
+          (eshell-mode . corfu-mode)
+          (sh-mode . corfu-mode)
+          (bash-mode . corfu-mode))
 
   :custom
   ;; Hide commands in M-x which do not apply to the current mode.
@@ -330,6 +332,10 @@
 
   ;; Enable Corfu
   :config
+  ;; Ensure escape quits corfu
+  (keymap-set corfu-map "ESC" #'corfu-quit)
+  ;; Use C-g to reset corfu (clear input)
+  (keymap-set corfu-map "C-g" #'corfu-reset)
   (global-corfu-mode))
 
 
@@ -630,8 +636,9 @@
   :config
   ;; Configure Python
   ;; Using 'rass' to multiplex ty, ruff, and djls
+
   (add-to-list 'eglot-server-programs
-               '((python-mode python-ts-mode) . ("rass" "--" "ty" "--" "ruff" "server" "--" "djls")))
+               '((python-mode python-ts-mode) . ("rass" "--" "ty" "server" "--" "ruff" "server" "--" "djls" "serve")))
 
   ;; Configure Web/HTML modes
   ;; Using 'rass' to multiplex vscode-html and tailwindcss behavior
