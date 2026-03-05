@@ -112,6 +112,13 @@
 
 (global-set-key (kbd "C-c y") 'ds/yank-with-slugify)
 
+(defun ds/insert-random-string (&optional length)
+  "Insert a random string of LENGTH characters (defaults to 16).
+Based on: tr -dc '...' </dev/urandom | head -c N"
+  (interactive "P")
+  (let ((len (if length (prefix-numeric-value length) 16)))
+    (insert (shell-command-to-string
+             (format "tr -dc 'A-Za-z0-9' </dev/urandom | head -c %d" len)))))
 
 ;; Auto sudo edit files that need permissions
 (use-package auto-sudoedit
@@ -285,6 +292,9 @@
 
 (add-hook 'find-file-hook 'ds/sudo-set-bg)
 
+
+
+
 (use-package spacious-padding
   :ensure t
   :bind
@@ -312,10 +322,10 @@
   :commands (corfu-mode global-corfu-mode)
 
   :hook ((prog-mode . corfu-mode)
-          (shell-mode . corfu-mode)
-          (eshell-mode . corfu-mode)
-          (sh-mode . corfu-mode)
-          (bash-mode . corfu-mode))
+         (shell-mode . corfu-mode)
+         (eshell-mode . corfu-mode)
+         (sh-mode . corfu-mode)
+         (bash-mode . corfu-mode))
 
   :custom
   ;; Hide commands in M-x which do not apply to the current mode.
@@ -1050,6 +1060,17 @@
 (setq agent-shell-google-authentication
       (agent-shell-google-make-authentication :login t))
 
+(add-hook 'agent-shell-mode-hook
+          (lambda ()
+            ;; Keep the prompt and output visible at the bottom of the window
+            (setq-local comint-scroll-show-maximum-output t)
+            (setq-local comint-scroll-to-bottom-on-input t)
+            ;; Prevent margins from pushing the bottom text out of view
+            (setq-local scroll-margin 2)
+            ;; Prevent recentering jumps that hide context
+            (setq-local scroll-conservatively 101)))
+
+
 (use-package pet
   :ensure t
   :defer t
@@ -1074,11 +1095,11 @@
 (setq switch-to-buffer-obey-display-actions t)
 
 (add-to-list 'display-buffer-alist
-             '("\\(?:\\*\\(?:acp\\|[Aa]gent-[Ss]hell\\|[Gg]emini\\)\\|Gemini CLI Agent\\).*"
+             '("\\(?:\\*\\(?:acp\\|[Aa]gent-[Ss]hell\\|[Gg]emini\\)\\|Gemini CLI Agent\\|OpenCode\\).*"
                (display-buffer-in-side-window)
                (side . right)
                (slot . 0)
-               (window-width . 0.3)
+               (window-width . 0.4)
                (dedicated . t)
                (window-parameters . ((no-other-window . t)
                                      (no-delete-other-windows . t)))))
