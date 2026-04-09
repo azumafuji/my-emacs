@@ -47,7 +47,6 @@
 ;; on disk.
 (add-hook 'after-init-hook #'global-auto-revert-mode)
 
-
 ;; recentf is an Emacs package that maintains a list of recently
 ;; accessed files, making it easier to reopen files you have worked on
 ;; recently.
@@ -253,22 +252,74 @@ Based on: tr -dc '...' </dev/urandom | head -c N"
 
   (doric-themes-select 'doric-light)
 
-  (set-face-attribute 'default nil :family "IosevkaTerm Nerd Font Mono" :height 110)
-  (set-face-attribute 'variable-pitch nil :family "IBM Plex Serif" :height 1.0)
-  (set-face-attribute 'fixed-pitch nil :family "IosevkaTerm Nerd Font Mono" :height 1.0)
-  (setq-default line-spacing 4)
+  (set-face-attribute 'default nil :family "AporeticSansMonoNerdFont" :height 110)
+  (set-face-attribute 'variable-pitch nil :family "Inter" :height 1.0)
+  (set-face-attribute 'fixed-pitch nil :family "AporeticSansMonoNerdFont" :height 1.0)
+  (setq-default line-spacing nil)
 
   :bind
   (("<f5>" . doric-themes-toggle)
    ("C-<f5>" . doric-themes-select)
    ("M-<f5>" . doric-themes-rotate)))
 
+;; (use-package ef-themes
+;;   :ensure t
+;;   :init
+;;   (ef-themes-take-over-modus-themes-mode 1)
+;;   :bind
+;;   (("<f5>" . modus-themes-toggle)
+;;    ("C-<f5>" . modus-themes-select)
+;;    ("M-<f5>" . modus-themes-rotate))
+;;   :config
+;;   ;; All customisations here.
+;;   (setq modus-themes-mixed-fonts t
+;;         modus-themes-italic-constructs t
+;;         modus-themes-to-toggle '(ef-maris-dark ef-maris-light)
+;;         modus-themes-disable-other-themes t
+;;         )
+;;
+;;   ;; Finally, load your theme of choice (or a random one with
+;;   ;; `modus-themes-load-random', `modus-themes-load-random-dark',
+;;   ;; `modus-themes-load-random-light').
+;;   (modus-themes-load-theme 'ef-maris-dark))
+
+
+(use-package modus-themes
+  :ensure t
+  :demand t
+  :init
+  :bind
+  (("<f5>" . modus-themes-rotate)
+   ("C-<f5>" . modus-themes-select)
+   ("M-<f5>" . modus-themes-load-random))
+  :config
+  ;; Your customizations here:
+  (setq modus-themes-to-toggle '(modus-operandi modus-vivendi)
+        modus-themes-to-rotate modus-themes-items
+        modus-themes-mixed-fonts t
+        modus-themes-variable-pitch-ui t
+        modus-themes-italic-constructs t
+        modus-themes-bold-constructs t
+        modus-themes-completions '((t . (bold)))
+        modus-themes-prompts '(bold)
+        modus-themes-headings
+        '((agenda-structure . (variable-pitch light 2.2))
+          (agenda-date . (variable-pitch regular 1.3))
+          (t . (regular 1.15))))
+
+  (setq modus-themes-common-palette-overrides nil)
+
+  ;; Finally, load your theme of choice (or a random one with
+  ;; `modus-themes-load-random', `modus-themes-load-random-dark',
+  ;; `modus-themes-load-random-light').
+  (modus-themes-load-theme 'modus-operandi))
+
 ;; To automatically switch between light and dark modes
 (use-package auto-dark
   :ensure t
   :config
   :custom
-  (auto-dark-themes '((doric-dark) (doric-light)))
+  (auto-dark-themes '((modus-vivendi) (modus-operandi)))
   :init
   (add-hook 'after-init-hook
             (lambda ()
@@ -292,23 +343,6 @@ Based on: tr -dc '...' </dev/urandom | head -c N"
 
 (add-hook 'find-file-hook 'ds/sudo-set-bg)
 
-
-
-
-(use-package spacious-padding
-  :ensure t
-  :bind
-  ("<f8>" . spacious-padding-mode)
-  :config
-  (setq spacious-padding-widths
-        '( :internal-border-width 15
-           :header-line-width 4
-           :mode-line-width 2
-           :tab-width 4
-           :right-divider-width 30
-           :scroll-bar-width 8)))
-
-(spacious-padding-mode 1)
 
 
 ;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;
@@ -666,7 +700,15 @@ Based on: tr -dc '...' </dev/urandom | head -c N"
   :ensure t
   :commands (apheleia-mode
              apheleia-global-mode)
-  :hook ((prog-mode . apheleia-mode)))
+  :hook ((prog-mode . apheleia-mode))
+  :config
+  (add-to-list 'apheleia-formatters '(ruff . ("ruff" "format" "-")))
+  (add-to-list 'apheleia-formatters '(ruff-fix . ("ruff" "check" "--fix" "--exit-zero" "-")))
+  (add-to-list 'apheleia-formatters '(black . ("black" "-")))
+  (add-to-list 'apheleia-formatters '(isort . ("isort" "-")))
+  (add-to-list 'apheleia-mode-alist '(python-mode . ruff))
+  (add-to-list 'apheleia-mode-alist '(python-ts-mode . ruff))
+  (add-to-list 'apheleia-mode-alist '(ruff-mode . ruff-fix)))
 
 ;; Tree-sitter configuration
 (use-package treesit-auto
@@ -676,6 +718,18 @@ Based on: tr -dc '...' </dev/urandom | head -c N"
   :config
   (treesit-auto-add-to-auto-mode-alist 'all)
   (global-treesit-auto-mode))
+
+;; Code folding using treesit
+(use-package treesit-fold
+  :ensure t
+  :bind (("C-c f c" . treesit-fold-close)
+         ("C-c f o" . treesit-fold-open)
+         ("C-c f r" . treesit-fold-open-recursively)
+         ("C-c f a" . treesit-fold-open-all)
+         ("C-c f C" . treesit-fold-close-all)
+         ("C-c f t" . treesit-fold-toggle))
+  :config
+  (global-treesit-fold-mode))
 
 
 
@@ -709,7 +763,9 @@ Based on: tr -dc '...' </dev/urandom | head -c N"
   :defer t)
 (use-package ox-odt
   :ensure t
-  :defer t)
+  :defer t
+  :config
+  (setq org-odt-soffice-executable "/usr/bin/soffice"))
 (use-package ox-tufte
   :ensure t
   :defer t)
@@ -1100,8 +1156,8 @@ Based on: tr -dc '...' </dev/urandom | head -c N"
                (side . right)
                (slot . 0)
                (window-width . 0.4)
-               (dedicated . t)
-               (window-parameters . ((no-other-window . t)
+               (window-parameters . ((dedicated . t)
+                                     (no-other-window . t)
                                      (no-delete-other-windows . t)))))
 
 (add-to-list 'display-buffer-alist
@@ -1112,9 +1168,242 @@ Based on: tr -dc '...' </dev/urandom | head -c N"
                (dedicated . t )
                (body-function . select-new-buffer)))
 
+;; for any "eat" based buffers like *project-eat*
 (add-to-list 'display-buffer-alist
-             '("\\*eat\\*"
+             '("\\*.*eat\\*.*"
                (display-buffer-in-side-window display-buffer-at-bottom)
                (side . bottom)
+               (dedicated . t)
                (slot . 0)
                (window-height . 0.25)))
+
+(defun ds/cycle-eat-buffers ()
+  "Cycle through all buffers that are in `eat-mode` or named like an eat buffer."
+  (interactive)
+  (let* ((all-bufs (buffer-list))
+         (eat-bufs (cl-remove-if-not
+                    (lambda (buf)
+                      (with-current-buffer buf
+                        (or (derived-mode-p 'eat-mode)
+                            (string-match-p "^\\*eat" (buffer-name buf)))))
+                    all-bufs))
+         ;; Sort alphabetically so the order is stable
+         (sorted-bufs (sort eat-bufs
+                            (lambda (a b)
+                              (string< (buffer-name a) (buffer-name b)))))
+         (current (current-buffer))
+         (next (or (cadr (member current sorted-bufs))
+                   (car sorted-bufs))))
+
+    (if (null sorted-bufs)
+        (message "No eat buffers found! Checked %d total buffers." (length all-bufs))
+      (if (eq next current)
+          (message "Only one eat buffer found: %s" (buffer-name next))
+        (switch-to-buffer next)
+        (message "Switched to: %s" (buffer-name next))))))
+
+(global-set-key (kbd "C-c t") #'ds/cycle-eat-buffers)
+
+
+(defun ds/toggle-agent-sidebar ()
+  "Hide or show the side windows."
+  (interactive)
+  (window-toggle-side-windows))
+
+(global-set-key (kbd "C-c s") #'ds/toggle-agent-sidebar)
+
+
+(defun ds/apply-ef-modeline-floating-padding (&rest _)
+  "Force floating padding by pulling colors directly from the ef-themes palette."
+  (let* ((active-bg   (modus-themes-get-color-value 'bg-mode-line-active))
+         (inactive-bg (modus-themes-get-color-value 'bg-mode-line-inactive))
+         (frame-bg    (modus-themes-get-color-value 'bg-main))
+         (active-fg   (modus-themes-get-color-value 'fg-main))
+         (internal-v  8)
+         (external-v  4)
+         (h-pad       12))
+
+    (when (and active-bg inactive-bg frame-bg)
+      ;; 1. Apply to Active faces
+      (dolist (face '(mode-line mode-line-active))
+        (when (facep face)
+          (set-face-attribute face nil
+                              :inherit nil
+                              :background active-bg
+                              :foreground active-fg
+                              :box `(:line-width (,h-pad . ,internal-v) :color ,active-bg :style nil)
+                              :overline `(:line-width ,external-v :color ,frame-bg)
+                              :underline `(:line-width ,external-v :color ,frame-bg))))
+
+      ;; 2. Apply to Inactive face
+      (set-face-attribute 'mode-line-inactive nil
+                          :inherit nil
+                          :background inactive-bg
+                          :box `(:line-width (,h-pad . ,internal-v) :color ,inactive-bg :style nil)
+                          :overline `(:line-width ,external-v :color ,frame-bg)
+                          :underline `(:line-width ,external-v :color ,frame-bg))))
+
+  (force-mode-line-update t))
+
+(add-hook 'ef-themes-post-load-hook #'ds/apply-ef-modeline-floating-padding t)
+
+(ds/apply-ef-modeline-floating-padding)
+
+
+(defun ds/setup-window-divider-gap (&rest _args)
+  "Create a 'transparent' physical gap between windows and the minibuffer."
+  (let ((bg (face-background 'default)))
+    ;; 1. Set the gap thickness (change 12 to your liking)
+    (setq window-divider-default-bottom-width 6)
+    (setq window-divider-default-places 'bottom-only)
+
+    ;; 2. Enable the mode
+    (window-divider-mode 1)
+
+    ;; 3. Style it to match the background
+    (set-face-attribute 'window-divider nil :foreground bg)
+    (set-face-attribute 'window-divider-last-pixel nil :foreground bg)))
+
+;; Apply to the current session
+(ds/setup-window-divider-gap)
+
+;; Ensure it re-syncs colors whenever you enable-theme (for Ef themes)
+(advice-add 'load-theme :after #'ds/setup-window-divider-gap)
+(advice-add 'enable-theme :after #'ds/setup-window-divider-gap)
+(advice-add 'enable-theme :after #'ds/apply-ef-modeline-floating-padding)
+
+(setq scroll-margin 2)
+
+
+;; ----------------------------------------------------------------------
+;; Jinx Spell Checker
+
+(use-package jinx
+  :ensure t
+  :defer t
+  :hook (emacs-startup . global-jinx-mode)
+  :bind (("M-$" . jinx-correct)
+         ("C-M-$" . jinx-languages)))
+
+
+;; ----------------------------------------------------------------------
+;; Elfeed
+
+(use-package elfeed
+  :ensure t
+  :defer t
+  :commands (elfeed))
+
+
+;; ----------------------------------------------------------------------
+;; Toggle window spliy
+(defun ds/window-toggle-split-direction ()
+  "Switch window split from horizontally to vertically, or vice versa.
+   i.e. change right window to bottom, or change bottom window to right."
+  (interactive)
+  (require 'windmove)
+  (let ((done))
+    (dolist (dirs '((right . down) (down . right)))
+      (unless done
+        (let* ((win (selected-window))
+               (nextdir (car dirs))
+               (neighbour-dir (cdr dirs))
+               (next-win (windmove-find-other-window nextdir win))
+               (neighbour1 (windmove-find-other-window neighbour-dir win))
+               (neighbour2 (if next-win (with-selected-window next-win
+                                          (windmove-find-other-window neighbour-dir next-win)))))
+          ;;(message "win: %s\nnext-win: %s\nneighbour1: %s\nneighbour2:%s" win next-win neighbour1 neighbour2)
+          (setq done (and (eq neighbour1 neighbour2)
+                          (not (eq (minibuffer-window) next-win))))
+          (if done
+              (let* ((other-buf (window-buffer next-win)))
+                (delete-window next-win)
+                (if (eq nextdir 'right)
+                    (split-window-vertically)
+                  (split-window-horizontally))
+                (set-window-buffer (windmove-find-other-window neighbour-dir) other-buf))))))))
+(global-set-key (kbd "C-c w") 'ds/window-toggle-split-direction)
+
+
+;; ------------------------------------------------------------------------
+;; AI integrations
+
+(use-package minuet
+  :ensure t
+  :defer t
+  :bind
+  (("M-y" . #'minuet-complete-with-minibuffer) ;; use minibuffer for completion
+   ("M-i" . #'minuet-show-suggestion) ;; use overlay for completion
+   ("C-c m" . #'minuet-configure-provider)
+   :map minuet-active-mode-map
+   ;; These keymaps activate only when a minuet suggestion is displayed in the current buffer
+   ("M-p" . #'minuet-previous-suggestion) ;; invoke completion or cycle to next completion
+   ("M-n" . #'minuet-next-suggestion) ;; invoke completion or cycle to previous completion
+   ("M-A" . #'minuet-accept-suggestion) ;; accept whole completion
+   ;; Accept the first line of completion, or N lines with a numeric-prefix:
+   ;; e.g. C-u 2 M-a will accepts 2 lines of completion.
+   ("M-a" . #'minuet-accept-suggestion-line)
+   ("M-e" . #'minuet-dismiss-suggestion))
+
+  :init
+  ;; if you want to enable auto suggestion.
+  ;; Note that you can manually invoke completions without enable minuet-auto-suggestion-mode
+  (add-hook 'prog-mode-hook #'minuet-auto-suggestion-mode)
+
+  :config
+  ;; You can use M-x minuet-configure-provider to interactively configure provider and model
+  (setq minuet-provider 'openai-fim-compatible)
+  (setq minuet-n-completions 1)
+  (setq minuet-context-window 512)
+  (plist-put minuet-openai-fim-compatible-options :end-point "http://localhost:8080/v1/completions")
+  (plist-put minuet-openai-fim-compatible-options :name "Llama.cpp")
+  (plist-put minuet-openai-fim-compatible-options :api-key "TERM")
+  (plist-put minuet-openai-fim-compatible-options :model "PLACEHOLDER")
+
+  (minuet-set-nested-plist minuet-openai-fim-compatible-options nil :template :suffix)
+  (minuet-set-optional-options
+   minuet-openai-fim-compatible-options
+   :prompt
+   (defun minuet-llama-cpp-fim-qwen-prompt-function (ctx)
+     (format "<|fim_prefix|>%s\n%s<|fim_suffix|>%s<|fim_middle|>"
+             (plist-get ctx :language-and-tab)
+             (plist-get ctx :before-cursor)
+             (plist-get ctx :after-cursor)))
+   :template)
+
+  (minuet-set-optional-options minuet-openai-fim-compatible-options :max_tokens 64))
+
+
+
+(use-package gptel
+  :ensure t
+  :demand t
+  :config
+  (setq gptel-default-mode 'org-mode)
+  (gptel-make-openai "MiniMax"
+    :host "api.minimax.io"
+    :endpoint "/v1/chat/completions"
+    :key (lambda ()
+           (auth-info-password (car (auth-source-search :host "api.minimax.io" :user "minimax_api_key"))))
+    :stream t
+    :models '(MiniMax-M2.7))
+  (gptel-make-openai "llama-cpp"
+    :protocol "http"
+    :host "localhost:8080"
+    :endpoint "/v1/chat/completions"
+    :key (lambda ()
+           (auth-info-password (car (auth-source-search :host "localhost" :user "admin" :port "8080"))))
+    :stream t
+    :models '(ggml-org/Qwen2.5-Coder-7B-Q8_0-GGUF))
+  (setq-default gptel-backend (gptel-get-backend "MiniMax"))
+  (setq-default gptel-model "MiniMax-M2.7"))
+
+(defun gptel-minimax ()
+  "Start a gptel session with MiniMax."
+  (interactive)
+  (gptel "MiniMax"))
+
+(defun gptel-llama ()
+  "Start a gptel session with local llama-cpp."
+  (interactive)
+  (gptel "llama-cpp"))
