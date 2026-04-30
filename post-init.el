@@ -4,7 +4,8 @@
 ;;
 ;; Ensure adding the following compile-angel code at the very beginning
 ;; of your `~/.emacs.d/post-init.el` file, before all other packages.
-
+(setq url-connect-timeout 30)
+(setq package-archive-upload-timeout 30)
 
 (use-package compile-angel
   :ensure t
@@ -45,17 +46,46 @@
 ;; Auto-revert in Emacs is a feature that automatically updates the
 ;; contents of a buffer to reflect changes made to the underlying file
 ;; on disk.
-(add-hook 'after-init-hook #'global-auto-revert-mode)
+(use-package autorevert
+  :ensure nil
+  :commands (auto-revert-mode global-auto-revert-mode)
+  :hook
+  (after-init . global-auto-revert-mode)
+  :init
+  ;; (setq auto-revert-verbose t)
+  (setq auto-revert-interval 3)
+  (setq auto-revert-remote-files nil)
+  (setq auto-revert-use-notify t)
+  (setq auto-revert-avoid-polling nil))
 
-;; recentf is an Emacs package that maintains a list of recently
+;; Recentf is an Emacs package that maintains a list of recently
 ;; accessed files, making it easier to reopen files you have worked on
 ;; recently.
+(use-package recentf
+  :ensure nil
+  :commands (recentf-mode recentf-cleanup)
+  :hook
+  (after-init . recentf-mode)
 
-(add-to-list 'recentf-exclude (expand-file-name "eln-cache/" user-emacs-directory))
-(add-to-list 'recentf-exclude (expand-file-name "etc/" user-emacs-directory))
-(add-to-list 'recentf-exclude (expand-file-name "var/" user-emacs-directory))
+  :init
+  (setq recentf-auto-cleanup (if (daemonp) 300 'never))
+  (setq recentf-exclude
+        (list "\\.tar$" "\\.tbz2$" "\\.tbz$" "\\.tgz$" "\\.bz2$"
+              "\\.bz$" "\\.gz$" "\\.gzip$" "\\.xz$" "\\.zip$"
+              "\\.7z$" "\\.rar$"
+              "COMMIT_EDITMSG\\'"
+              "\\.\\(?:gz\\|gif\\|svg\\|png\\|jpe?g\\|bmp\\|xpm\\)$"
+              "-autoloads\\.el$" "autoload\\.el$"))
 
-(setq recentf-max-saved-items 100)
+  :config
+  (add-to-list 'recentf-exclude (expand-file-name "eln-cache/" user-emacs-directory))
+  (add-to-list 'recentf-exclude (expand-file-name "etc/" user-emacs-directory))
+  (add-to-list 'recentf-exclude (expand-file-name "var/" user-emacs-directory))
+  ;; A cleanup depth of -90 ensures that `recentf-cleanup' runs before
+  ;; `recentf-save-list', allowing stale entries to be removed before the list
+  ;; is saved by `recentf-save-list', which is automatically added to
+  ;; `kill-emacs-hook' by `recentf-mode'.
+  (add-hook 'kill-emacs-hook #'recentf-cleanup -90))
 
 (add-hook 'after-init-hook #'(lambda()
                                (let ((inhibit-message t))
@@ -78,12 +108,27 @@
 ;; sessions. It saves the history of inputs in the minibuffer, such as commands,
 ;; search strings, and other prompts, to a file. This allows users to retain
 ;; their minibuffer history across Emacs restarts.
-(add-hook 'after-init-hook #'savehist-mode)
+(use-package savehist
+  :ensure nil
+  :commands (savehist-mode savehist-save)
+  :hook
+  (after-init . savehist-mode)
+  :init
+  (setq history-length 300)
+  (setq savehist-autosave-interval 600))
 
 ;; save-place-mode enables Emacs to remember the last location within a file
 ;; upon reopening. This feature is particularly beneficial for resuming work at
 ;; the precise point where you previously left off.
-(add-hook 'after-init-hook #'save-place-mode)
+(use-package saveplace
+  :ensure nil
+  :commands (save-place-mode save-place-local-mode)
+  :hook
+  (after-init . save-place-mode)
+  :init
+  (setq save-place-limit 400))
+
+
 
 ;; Enable `auto-save-mode' to prevent data loss. Use `recover-file' or
 ;; `recover-session' to restore unsaved changes.
@@ -241,49 +286,6 @@ Based on: tr -dc '...' </dev/urandom | head -c N"
 ;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;
 ;; Theme and Fonts
 
-(use-package doric-themes
-  :ensure t
-  :demand t
-  :config
-  ;; These are the default values.
-  (setq custom-safe-themes t)
-  (setq doric-themes-to-toggle '(doric-light doric-dark))
-  (setq doric-themes-to-rotate doric-themes-collection)
-
-  (doric-themes-select 'doric-light)
-
-  (set-face-attribute 'default nil :family "AporeticSansMonoNerdFont" :height 110)
-  (set-face-attribute 'variable-pitch nil :family "Inter" :height 1.0)
-  (set-face-attribute 'fixed-pitch nil :family "AporeticSansMonoNerdFont" :height 1.0)
-  (setq-default line-spacing nil)
-
-  :bind
-  (("<f5>" . doric-themes-toggle)
-   ("C-<f5>" . doric-themes-select)
-   ("M-<f5>" . doric-themes-rotate)))
-
-;; (use-package ef-themes
-;;   :ensure t
-;;   :init
-;;   (ef-themes-take-over-modus-themes-mode 1)
-;;   :bind
-;;   (("<f5>" . modus-themes-toggle)
-;;    ("C-<f5>" . modus-themes-select)
-;;    ("M-<f5>" . modus-themes-rotate))
-;;   :config
-;;   ;; All customisations here.
-;;   (setq modus-themes-mixed-fonts t
-;;         modus-themes-italic-constructs t
-;;         modus-themes-to-toggle '(ef-maris-dark ef-maris-light)
-;;         modus-themes-disable-other-themes t
-;;         )
-;;
-;;   ;; Finally, load your theme of choice (or a random one with
-;;   ;; `modus-themes-load-random', `modus-themes-load-random-dark',
-;;   ;; `modus-themes-load-random-light').
-;;   (modus-themes-load-theme 'ef-maris-dark))
-
-
 (use-package modus-themes
   :ensure t
   :demand t
@@ -294,6 +296,11 @@ Based on: tr -dc '...' </dev/urandom | head -c N"
    ("M-<f5>" . modus-themes-load-random))
   :config
   ;; Your customizations here:
+  (set-face-attribute 'default nil :family "AporeticSansMonoNerdFont" :height 110)
+  (set-face-attribute 'variable-pitch nil :family "Noto Sans" :height 1.0)
+  (set-face-attribute 'fixed-pitch nil :family "AporeticSansMonoNerdFont" :height 1.0)
+  (setq-default line-spacing nil)
+
   (setq modus-themes-to-toggle '(modus-operandi modus-vivendi)
         modus-themes-to-rotate modus-themes-items
         modus-themes-mixed-fonts t
@@ -306,7 +313,8 @@ Based on: tr -dc '...' </dev/urandom | head -c N"
         '((agenda-structure . (variable-pitch light 2.2))
           (agenda-date . (variable-pitch regular 1.3))
           (t . (regular 1.15))))
-
+  (load-theme 'modus-vivendi :no-confirm)
+  (load-theme 'modus-operandi :no-confirm)
   (setq modus-themes-common-palette-overrides nil)
 
   ;; Finally, load your theme of choice (or a random one with
@@ -342,7 +350,6 @@ Based on: tr -dc '...' </dev/urandom | head -c N"
          (ds/sudo-bg-color))))
 
 (add-hook 'find-file-hook 'ds/sudo-set-bg)
-
 
 
 ;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;
@@ -467,9 +474,7 @@ Based on: tr -dc '...' </dev/urandom | head -c N"
                  (window-parameters (mode-line-format . none)))))
 
 (use-package embark-consult
-  :ensure t
-  :hook
-  (embark-collect-mode . consult-preview-at-point-mode))
+  :ensure t)
 
 ;; Consult offers a suite of commands for efficient searching, previewing, and
 ;; interacting with buffers, file contents, and more, improving various tasks.
@@ -656,7 +661,7 @@ Based on: tr -dc '...' </dev/urandom | head -c N"
   :hook (after-init . undo-fu-session-global-mode))
 
 
-;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;
+  ;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;
 ;; Eglot and Programming
 
 ;; Set up the Language Server Protocol (LSP) servers using Eglot.
@@ -678,16 +683,29 @@ Based on: tr -dc '...' </dev/urandom | head -c N"
   (eglot-stay-out-of '(yasnippet))
   (eglot-events-buffer-size 0) ;; Disable logging for performance
   :config
-  ;; Configure Python
-  ;; Using 'rass' to multiplex ty, ruff, and djls
+  (defun my/find-pyproject-root ()
+    "Find nearest pyproject.toml or uv.lock from current buffer."
+    (if buffer-file-name
+        (let ((dir (file-name-directory (expand-file-name buffer-file-name))))
+          (or (locate-dominating-file dir "pyproject.toml")
+              (locate-dominating-file dir "uv.lock")
+              dir))
+      default-directory))
 
+  (defun my/eglot-python-servers (&rest _)
+    "Return eglot server command for Python using uv from project root."
+    (let ((default-directory (or (my/find-pyproject-root) default-directory)))
+      (list "rass" "--" "uv" "run" "ty" "server" "--" "uv" "run" "ruff" "server" "--" "uv" "run" "djls" "serve")))
+
+  ;; Configure Python
+  ;; Using 'rass' to multiplex ty, ruff, and djls via uv
   (add-to-list 'eglot-server-programs
-               '((python-mode python-ts-mode) . ("rass" "--" "ty" "server" "--" "ruff" "server" "--" "djls" "serve")))
+               '((python-mode python-ts-mode) . my/eglot-python-servers))
 
   ;; Configure Web/HTML modes
   ;; Using 'rass' to multiplex vscode-html and tailwindcss behavior
   (add-to-list 'eglot-server-programs
-               '((html-mode html-ts-mode mhtml-mode web-mode) . ("rass" "--" "vscode-html-language-server" "--stdio" "--" "tailwindcss-language-server" "--stdio"))))
+               '((html-mode html-ts-mode mhtml-mode web-mode) . ("rass" "--" "vscode-html-language-server" "--stdio" "--" "tailwindcss-language-server" "--stdio" "--" "djlsp" "--" "typescript-language-server" "--stdio"))))
 
 (use-package consult-eglot
   :ensure t
@@ -731,10 +749,6 @@ Based on: tr -dc '...' </dev/urandom | head -c N"
   :config
   (global-treesit-fold-mode))
 
-
-
-;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;
-;; Sessions
 
 
 ;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;
@@ -895,46 +909,12 @@ Based on: tr -dc '...' </dev/urandom | head -c N"
   :mode (("\\.markdown\\'" . markdown-mode)
          ("\\.md\\'" . markdown-mode)
          ("README\\.md\\'" . gfm-mode))
+  :config
+  (setq markdown-css-paths '("https://cdn.jsdelivr.net/gh/alvaromontoro/almond.css@latest/dist/almond.min.css"))
   :bind
   (:map markdown-mode-map
         ("C-c C-e" . markdown-do)))
 
-
-;; This automates the process of updating installed packages
-(use-package auto-package-update
-  :ensure t
-  :custom
-  ;; Set the number of days between automatic updates.
-  ;; Here, packages will only be updated if at least 7 days have passed
-  ;; since the last successful update.
-  (auto-package-update-interval 7)
-
-  ;; Suppress display of the *auto-package-update results* buffer after updates.
-  ;; This keeps the user interface clean and avoids unnecessary interruptions.
-  (auto-package-update-hide-results t)
-
-  ;; Automatically delete old package versions after updates to reduce disk
-  ;; usage and keep the package directory clean. This prevents the accumulation
-  ;; of outdated files in Emacs’s package directory, which consume
-  ;; unnecessary disk space over time.
-  (auto-package-update-delete-old-versions t)
-
-  ;; Uncomment the following line to enable a confirmation prompt
-  ;; before applying updates. This can be useful if you want manual control.
-  ;; (auto-package-update-prompt-before-update t)
-
-  :config
-  ;; Run package updates automatically at startup, but only if the configured
-  ;; interval has elapsed.
-  (auto-package-update-maybe)
-
-  ;; Schedule a background update attempt daily at 10:00 AM.
-  ;; This uses Emacs' internal timer system. If Emacs is running at that time,
-  ;; the update will be triggered. Otherwise, the update is skipped for that
-  ;; day. Note that this scheduled update is independent of
-  ;; `auto-package-update-maybe` and can be used as a complementary or
-  ;; alternative mechanism.
-  (auto-package-update-at-time "10:00"))
 
 (use-package buffer-terminator
   :ensure t
@@ -1055,12 +1035,6 @@ Based on: tr -dc '...' </dev/urandom | head -c N"
 
   (treemacs-hide-gitignored-files-mode nil))
 
-;; (use-package treemacs-icons-dired
-;;   :hook (dired-mode . treemacs-icons-dired-enable-once)
-;;   :ensure t)
-;;
-;; (treemacs-start-on-boot)
-
 
 ;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;
 ;; Dev
@@ -1140,6 +1114,8 @@ Based on: tr -dc '...' </dev/urandom | head -c N"
          ("M-o" . ace-window))
    (:map eat-char-mode-map
          ("M-o" . ace-window))))
+
+
 ;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;
 ;; Window Management
 
@@ -1151,7 +1127,7 @@ Based on: tr -dc '...' </dev/urandom | head -c N"
 (setq switch-to-buffer-obey-display-actions t)
 
 (add-to-list 'display-buffer-alist
-             '("\\(?:\\*\\(?:acp\\|[Aa]gent-[Ss]hell\\|[Gg]emini\\)\\|Gemini CLI Agent\\|OpenCode\\).*"
+             '("\\(?:\\*\\(?:acp\\|[Aa]gent-[Ss]hell\\|[Gg]emini\\)\\|Gemini CLI Agent\\|OpenCode \\).*"
                (display-buffer-in-side-window)
                (side . right)
                (slot . 0)
@@ -1276,27 +1252,7 @@ Based on: tr -dc '...' </dev/urandom | head -c N"
 
 
 ;; ----------------------------------------------------------------------
-;; Jinx Spell Checker
-
-(use-package jinx
-  :ensure t
-  :defer t
-  :hook (emacs-startup . global-jinx-mode)
-  :bind (("M-$" . jinx-correct)
-         ("C-M-$" . jinx-languages)))
-
-
-;; ----------------------------------------------------------------------
-;; Elfeed
-
-(use-package elfeed
-  :ensure t
-  :defer t
-  :commands (elfeed))
-
-
-;; ----------------------------------------------------------------------
-;; Toggle window spliy
+;; Toggle window split
 (defun ds/window-toggle-split-direction ()
   "Switch window split from horizontally to vertically, or vice versa.
    i.e. change right window to bottom, or change bottom window to right."
@@ -1325,55 +1281,30 @@ Based on: tr -dc '...' </dev/urandom | head -c N"
 (global-set-key (kbd "C-c w") 'ds/window-toggle-split-direction)
 
 
-;; ------------------------------------------------------------------------
-;; AI integrations
 
-(use-package minuet
+;; ----------------------------------------------------------------------
+;; Jinx Spell Checker
+
+(use-package jinx
   :ensure t
   :defer t
-  :bind
-  (("M-y" . #'minuet-complete-with-minibuffer) ;; use minibuffer for completion
-   ("M-i" . #'minuet-show-suggestion) ;; use overlay for completion
-   ("C-c m" . #'minuet-configure-provider)
-   :map minuet-active-mode-map
-   ;; These keymaps activate only when a minuet suggestion is displayed in the current buffer
-   ("M-p" . #'minuet-previous-suggestion) ;; invoke completion or cycle to next completion
-   ("M-n" . #'minuet-next-suggestion) ;; invoke completion or cycle to previous completion
-   ("M-A" . #'minuet-accept-suggestion) ;; accept whole completion
-   ;; Accept the first line of completion, or N lines with a numeric-prefix:
-   ;; e.g. C-u 2 M-a will accepts 2 lines of completion.
-   ("M-a" . #'minuet-accept-suggestion-line)
-   ("M-e" . #'minuet-dismiss-suggestion))
-
-  :init
-  ;; if you want to enable auto suggestion.
-  ;; Note that you can manually invoke completions without enable minuet-auto-suggestion-mode
-  (add-hook 'prog-mode-hook #'minuet-auto-suggestion-mode)
-
-  :config
-  ;; You can use M-x minuet-configure-provider to interactively configure provider and model
-  (setq minuet-provider 'openai-fim-compatible)
-  (setq minuet-n-completions 1)
-  (setq minuet-context-window 512)
-  (plist-put minuet-openai-fim-compatible-options :end-point "http://localhost:8080/v1/completions")
-  (plist-put minuet-openai-fim-compatible-options :name "Llama.cpp")
-  (plist-put minuet-openai-fim-compatible-options :api-key "TERM")
-  (plist-put minuet-openai-fim-compatible-options :model "PLACEHOLDER")
-
-  (minuet-set-nested-plist minuet-openai-fim-compatible-options nil :template :suffix)
-  (minuet-set-optional-options
-   minuet-openai-fim-compatible-options
-   :prompt
-   (defun minuet-llama-cpp-fim-qwen-prompt-function (ctx)
-     (format "<|fim_prefix|>%s\n%s<|fim_suffix|>%s<|fim_middle|>"
-             (plist-get ctx :language-and-tab)
-             (plist-get ctx :before-cursor)
-             (plist-get ctx :after-cursor)))
-   :template)
-
-  (minuet-set-optional-options minuet-openai-fim-compatible-options :max_tokens 64))
+  :hook (emacs-startup . global-jinx-mode)
+  :bind (("M-$" . jinx-correct)
+         ("C-M-$" . jinx-languages)))
 
 
+;; ----------------------------------------------------------------------
+;; Elfeed
+
+(use-package elfeed
+  :ensure t
+  :defer t
+  :commands (elfeed))
+
+
+
+;; ----------------------------------------------------------------------
+;; gptel
 
 (use-package gptel
   :ensure t
@@ -1394,7 +1325,7 @@ Based on: tr -dc '...' </dev/urandom | head -c N"
     :key (lambda ()
            (auth-info-password (car (auth-source-search :host "localhost" :user "admin" :port "8080"))))
     :stream t
-    :models '(ggml-org/Qwen2.5-Coder-7B-Q8_0-GGUF))
+    :models '(placeholder))
   (setq-default gptel-backend (gptel-get-backend "MiniMax"))
   (setq-default gptel-model "MiniMax-M2.7"))
 
@@ -1407,3 +1338,50 @@ Based on: tr -dc '...' </dev/urandom | head -c N"
   "Start a gptel session with local llama-cpp."
   (interactive)
   (gptel "llama-cpp"))
+
+
+(use-package minuet
+  :ensure t
+  :defer t
+  :bind
+  (("M-y" . #'minuet-complete-with-minibuffer) ;; use minibuffer for completion
+   ("M-i" . #'minuet-show-suggestion) ;; use overlay for completion
+   ("C-c m" . #'minuet-configure-provider)
+   :map minuet-active-mode-map
+   ;; These keymaps activate only when a minuet suggestion is displayed in the current buffer
+   ("M-p" . #'minuet-previous-suggestion) ;; invoke completion or cycle to next completion
+   ("M-n" . #'minuet-next-suggestion) ;; invoke completion or cycle to previous completion
+   ("M-A" . #'minuet-accept-suggestion) ;; accept whole completion
+   ;; Accept the first line of completion, or N lines with a numeric-prefix:
+   ;; e.g. C-u 2 M-a will accepts 2 lines of completion.
+   ("M-a" . #'minuet-accept-suggestion-line)
+   ("M-e" . #'minuet-dismiss-suggestion))
+
+  ;; :init
+  ;; if you want to enable auto suggestion.
+  ;; Note that you can manually invoke completions without enable minuet-auto-suggestion-mode
+  ;; (add-hook 'prog-mode-hook #'minuet-auto-suggestion-mode)
+
+  :config
+  ;; You can use M-x minuet-configure-provider to interactively configure provider and model
+  (setq minuet-provider 'openai-fim-compatible)
+  (setq minuet-n-completions 1)
+  (setq minuet-context-window 512)
+  (setq minuet-auto-suggestion-mode nil)
+  (plist-put minuet-openai-fim-compatible-options :end-point "http://localhost:8080/v1/completions")
+  (plist-put minuet-openai-fim-compatible-options :name "Llama.cpp")
+  (plist-put minuet-openai-fim-compatible-options :api-key "TERM")
+  (plist-put minuet-openai-fim-compatible-options :model "PLACEHOLDER")
+
+  (minuet-set-nested-plist minuet-openai-fim-compatible-options nil :template :suffix)
+  (minuet-set-optional-options
+   minuet-openai-fim-compatible-options
+   :prompt
+   (defun minuet-llama-cpp-fim-qwen-prompt-function (ctx)
+     (format "<|fim_prefix|>%s\n%s<|fim_suffix|>%s<|fim_middle|>"
+             (plist-get ctx :language-and-tab)
+             (plist-get ctx :before-cursor)
+             (plist-get ctx :after-cursor)))
+   :template)
+
+  (minuet-set-optional-options minuet-openai-fim-compatible-options :max_tokens 64))
