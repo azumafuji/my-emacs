@@ -282,6 +282,11 @@ Based on: tr -dc '...' </dev/urandom | head -c N"
   :bind (("M-o" . ace-window)
          ("M-O" . ace-swap-window)))
 
+;; Unbind M-o in html-mode (inherited from sgml-mode as `sgml-set-face`)
+;; so the global ace-window binding takes effect.
+(add-hook 'html-mode-hook
+          (lambda () (local-unset-key (kbd "M-o"))))
+
 
 ;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;
 ;; Theme and Fonts
@@ -296,9 +301,9 @@ Based on: tr -dc '...' </dev/urandom | head -c N"
    ("M-<f5>" . modus-themes-load-random))
   :config
   ;; Your customizations here:
-  (set-face-attribute 'default nil :family "AporeticSansMonoNerdFont" :height 110)
-  (set-face-attribute 'variable-pitch nil :family "Noto Sans" :height 1.0)
-  (set-face-attribute 'fixed-pitch nil :family "AporeticSansMonoNerdFont" :height 1.0)
+  (set-face-attribute 'default nil :family "MonaspiceNeNerdFont" :weight 'normal :height 120)
+  (set-face-attribute 'variable-pitch nil :family "MonaspiceRnNerdFont" :weight 'normal :height 1.0)
+  (set-face-attribute 'fixed-pitch nil :family "MonaspiceNeNerdFont" :weight 'normal :height 1.0)
   (setq-default line-spacing nil)
 
   (setq modus-themes-to-toggle '(modus-operandi modus-vivendi)
@@ -321,6 +326,17 @@ Based on: tr -dc '...' </dev/urandom | head -c N"
   ;; `modus-themes-load-random', `modus-themes-load-random-dark',
   ;; `modus-themes-load-random-light').
   (modus-themes-load-theme 'modus-operandi))
+
+;; Set bold face to use Operator Mono Book after everything is loaded
+;; (frames, themes, auto-dark). Same window-setup-hook pattern that's
+;; used for mode-line faces in post-early-init.el.
+;; (defun ds/set-bold-font (&optional frame)
+;;   (dolist (f (or (and frame (list frame)) (frame-list)))
+;;     (with-selected-frame f
+;;       (set-face-attribute 'bold nil :family "Operator Mono Book"))))
+;; (add-hook 'window-setup-hook #'ds/set-bold-font)
+;; (add-hook 'modus-themes-after-load-theme-hook #'ds/set-bold-font)
+;; (add-hook 'after-make-frame-functions #'ds/set-bold-font)
 
 ;; To automatically switch between light and dark modes
 (use-package auto-dark
@@ -984,7 +1000,7 @@ Based on: tr -dc '...' </dev/urandom | head -c N"
         treemacs-is-never-other-window           nil
         treemacs-max-git-entries                 5000
         treemacs-missing-project-action          'ask
-        treemacs-move-files-by-mouse-dragging    t
+        treemacs-move-files-by-mouse-dragging    nil
         treemacs-move-forward-on-expand          nil
         treemacs-no-png-images                   nil
         treemacs-no-delete-other-windows         t
@@ -1385,3 +1401,11 @@ Based on: tr -dc '...' </dev/urandom | head -c N"
    :template)
 
   (minuet-set-optional-options minuet-openai-fim-compatible-options :max_tokens 64))
+
+
+;; ------------------------------------------------------------------------
+
+(use-package fortune-cookie
+  :config
+  (setq fortune-cookie-cowsay-args  "-f three-eyes -s")
+  (fortune-cookie-mode))
